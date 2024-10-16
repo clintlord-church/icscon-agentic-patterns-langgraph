@@ -7,9 +7,9 @@ Create .env file from .env-example and fill in key values
 
 ## Module installation
 
-Run 
+This project relies on pyenv and pipenv for managing dependencies.  To install the dependencies, run the following commands:
 
-    pipenv install
+    pipenv install --python=$(pyenv which python)
 
 ## NOTES
 
