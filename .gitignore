@@ -1,0 +1,5 @@
+.env
+**/dev
+.venv/
+__pycache__/
+**/research_agent
