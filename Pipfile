@@ -9,6 +9,7 @@ langchain-openai = "*"
 ipython = "*"
 langchain-community = "*"
 wikipedia = "*"
+yfinance = "*"
 
 [dev-packages]
 

@@ -2,10 +2,9 @@ import os
 import datetime
 from typing import Annotated
 from langchain_core.messages import HumanMessage
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langgraph.graph import END, START, StateGraph, MessagesState
 from langgraph.types import Send
-from IPython.display import Image
 from APIArchitectAgent import APIDefinition, APIArchitectAgent
 from DynamoDBArchitectAgent import DynamoTables, DynamoDBArchitectAgent
 from CodeBaseModels import CodeFile
@@ -14,13 +13,16 @@ from DynamoDBTerraformAgent import DynamoDBTerraformAgent
 from APIGatewayTerraformAgent import APIGatewayTerraformAgent
 
 # model used for planning and other general cognative tasks
-general_model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+# general_model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+general_model = AzureChatOpenAI(model="gpt-4o-mini", temperature=0, api_version=os.environ['AZURE_OPENAI_API_VERSION'])
+
 # model used for coding
-coding_model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+# coding_model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+coding_model = AzureChatOpenAI(model="gpt-4o-mini", temperature=0, api_version=os.environ['AZURE_OPENAI_API_VERSION'])
 
 # setting for code review
-min_quality_score = 6
-max_review_iterations = 1
+min_quality_score = 8
+max_review_iterations = 3
 
 
 def add_codefile(left: list[CodeFile], right: list[CodeFile]) -> list[CodeFile]:
@@ -148,9 +150,11 @@ dev_folder = running_folder + "/dev/" + datetime.datetime.now().strftime("%Y%m%d
 if not os.path.exists(dev_folder):
     os.makedirs(dev_folder, exist_ok=True)
 
-# save the png of the graph
-image = Image(app.get_graph(xray=1).draw_mermaid_png())
-open(f"{dev_folder}/dev_team_graph.png", "wb").write(image.data)
+# draw the graph
+png_bytes = app.get_graph(xray=1).draw_mermaid_png()
+
+with open(f"{dev_folder}/dev_team_graph.png", "wb") as f:
+    f.write(png_bytes)
 
 description = """
 Build an API that will allow the user to create, read, update and delete blog posts.

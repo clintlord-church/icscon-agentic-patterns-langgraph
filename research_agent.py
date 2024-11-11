@@ -1,12 +1,13 @@
 import os, datetime, json
-from langchain_openai import ChatOpenAI
-from typing import Annotated
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
+from typing import Annotated, Optional
 from langgraph.graph import END, START, StateGraph, MessagesState
 from langgraph.prebuilt import ToolNode, tools_condition
 from IPython.display import Image
 from langchain_community.tools import TavilySearchResults, WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_core.messages import HumanMessage
+import yfinance as yf
 
 
 # ANSI escape codes for color
@@ -16,7 +17,8 @@ RESET = "\033[0m"
 def print_message(title, content):
     print(RED + "**** " + title + " ****" + RESET + "\n" + content + "\n")
 
-model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+# model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+model = AzureChatOpenAI(model="gpt-4o-mini", temperature=0, api_version=os.environ['AZURE_OPENAI_API_VERSION'])
 
 class ResearchState(MessagesState):
     ResearchGoal: str
@@ -31,13 +33,33 @@ def weather_search(query: Annotated[str, "The search query to run"]) -> Annotate
     return result
 
 
-#fake stock search
-def stock_search(query: Annotated[str, "The search query to run"]) -> Annotated[str, "The search results"]:
-    """Search the stock market with the query"""
-    print_message("Stock Query", query)
-    result = "The stock market is up 100 points."
-    print_message("Stock Results", result)
-    return result
+# stock search tool using Yahoo Finance
+def stock_search(symbol: Annotated[str, "The stock ticker symbol (e.g., 'AAPL' for Apple, 'GOOGL' for Alphabet)"], start_date: Annotated[str, "The start date of the data being requested in YYYY-MM-DD format"], end_date: Annotated[str, "The end date of the data being requested in YYYY-MM-DD format"]) -> Annotated[Optional[list[dict]], "A list of dictionaries where each dictionary represents a row of stock data with keys like 'Date', 'Open', 'High', 'Low', 'Close', 'Volume', etc."]:
+    """
+    Retrieve stock price data for the given stock symbol over a specified date range using Yahoo Finance.
+    """
+    print_message("Stock Query", f"Symbol: {symbol}, Start Date: {start_date}, End Date: {end_date}")
+    try:
+        stock = yf.Ticker(symbol)
+        data = stock.history(start=start_date, end=end_date)  # Get data for the date range
+        
+        if not data.empty:
+            # Convert the DataFrame to a list of dictionaries
+            data.reset_index(inplace=True)  # Make 'Date' a column instead of the index
+            data_list = data.to_dict(orient='records')  # Convert to list of dicts
+            try:
+                # Fix the unseralizable datetime objects
+                for row in data_list:
+                    row["Date"] = row["Date"].strftime("%Y-%m-%d")
+                print_message("Stock Query results", json.dumps(data_list))
+            except Exception as e:
+                print_message("Error", "Error converting query results to JSON: " + str(e))
+            return data_list
+        else:
+            raise ValueError("No data found for the provided symbol and date range.")
+    except Exception as e:
+        print(f"Error retrieving stock price data: {e}")
+        return None
 
 
 # web search tool using Tavily
@@ -128,10 +150,10 @@ if not os.path.exists(research_folder):
 image = Image(app.get_graph(xray=1).draw_mermaid_png())
 open(f"{research_folder}/research_agent_graph.png", "wb").write(image.data)
 
-#research_goal = "What was the topic of Present Russell M. Nelson's most recent message during General Conference?"
-#research_goal = "Who is President Russell M. Nelson?"
-research_goal = "What is the weather in Salt Lake City?"
-#research_goal = "What is the stock market doing today?"
+# research_goal = "What was the topic of Present Russell M. Nelson's most recent message during General Conference?"
+# research_goal = "Who is President Russell M. Nelson?"
+# research_goal = "What is the weather in Salt Lake City?"
+research_goal = "How has Apple stock done this week?  What news is impacting the stock price?"
 
 final_state = app.invoke(
     {"messages": [HumanMessage(content=research_goal)], "ResearchGoal": research_goal},
