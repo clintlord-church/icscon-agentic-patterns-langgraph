@@ -3,3 +3,4 @@
 .venv/
 __pycache__/
 **/research_agent
+Pipfile.lock
