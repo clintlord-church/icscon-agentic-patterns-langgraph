@@ -3,7 +3,6 @@ from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from typing import Annotated, Optional
 from langgraph.graph import END, START, StateGraph, MessagesState
 from langgraph.prebuilt import ToolNode, tools_condition
-from IPython.display import Image
 from langchain_community.tools import TavilySearchResults, WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_core.messages import HumanMessage
@@ -146,14 +145,15 @@ research_folder = running_folder + "/research_agent"
 if not os.path.exists(research_folder):
     os.makedirs(research_folder)
 
-# save the png of the graph
-image = Image(app.get_graph(xray=1).draw_mermaid_png())
-open(f"{research_folder}/research_agent_graph.png", "wb").write(image.data)
+# draw the graph
+png_bytes = app.get_graph(xray=1).draw_mermaid_png()
 
-# research_goal = "What was the topic of Present Russell M. Nelson's most recent message during General Conference?"
+with open(f"{research_folder}/research_agent_graph.png", "wb") as f:
+    f.write(png_bytes)
+
+research_goal = "What was the topic of Present Russell M. Nelson's most recent message during General Conference?"
 # research_goal = "Who is President Russell M. Nelson?"
-# research_goal = "What is the weather in Salt Lake City?"
-research_goal = "How has Apple stock done this week?  What news is impacting the stock price?"
+# research_goal = "How has Apple stock done this week?  What news is impacting the stock price?"
 
 final_state = app.invoke(
     {"messages": [HumanMessage(content=research_goal)], "ResearchGoal": research_goal},

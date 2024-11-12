@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 langgraph = "*"
 langchain-openai = "*"
-ipython = "*"
 langchain-community = "*"
 wikipedia = "*"
 yfinance = "*"
